@@ -55,7 +55,9 @@ class DevConfig(BaseConfig):
     REDIS_URL = "redis://:@localhost:6379/0"
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URI')
     RATELIMIT_STORAGE_URL = "redis://:@localhost:6379/0"
-    BROKER_URL = 'amqp://guest:@127.0.0.1:5672/'
+    #BROKER_URL = 'amqp://guest:@127.0.0.1:5672/'
+    CELERY_RESULT_BACKEND = "redis://:@localhost:6379/0"
+    CELERY_BROKER_URL = "redis://:@localhost:6379/0"
 
 
 class TestConfig(BaseConfig):
