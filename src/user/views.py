@@ -37,7 +37,7 @@ class UserLoginResource(Resource):
             print(data)
             user = self.model.query.filter(self.model.mobile_number == data['mobile_number']).first()
             print(user)
-            if user and verify_and_update_password(data['password'], user) and login_user(user):
+            if user and verify_and_update_password(data['password'], user): #and login_user(user):
                 expires = timedelta(days=365)
                 return make_response(
                     jsonify({'id': user.id,
