@@ -4,6 +4,7 @@ from sqlalchemy import UniqueConstraint, func
 from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
 
 from src import db, ReprMixin, BaseMixin
+from datetime import datetime
 
 
 class UserRole(BaseMixin, db.Model):
@@ -25,7 +26,7 @@ class Role(BaseMixin, RoleMixin, ReprMixin, db.Model):
 
 
 class User(BaseMixin, ReprMixin, UserMixin, db.Model):
-    __repr_fields__ = ['id', 'name']
+    __repr_fields__ = ['id', 'first_name']
 
     razor_pay_id = db.Column(db.String(20), nullable=True, unique=True)
     email = db.Column(db.String(127), unique=True, nullable=True, index=True)
@@ -34,10 +35,11 @@ class User(BaseMixin, ReprMixin, UserMixin, db.Model):
     last_name = db.Column(db.String(55), nullable=True)
     mobile_number = db.Column(db.String(20), unique=True, nullable=False, index=True)
     business_name = db.Column(db.String(55), nullable=True)
+    counter = db.Column(db.Integer, nullable=True, default=0)
 
     picture = db.Column(db.Text(), nullable=True, index=True)
-    active = db.Column(db.Boolean())
-    confirmed_at = db.Column(db.DateTime())
+    active = db.Column(db.Boolean(), default=False)
+    confirmed_at = db.Column(db.DateTime(), default=datetime.utcnow)
     last_login_at = db.Column(db.DateTime())
     current_login_at = db.Column(db.DateTime())
 
@@ -51,7 +53,7 @@ class User(BaseMixin, ReprMixin, UserMixin, db.Model):
     def fixed_dues(self):
         from src.dues.models import Due
         return Due.query.with_entities(Due.amount)\
-            .filter(Due.is_paid.isnot(True), Due.creator_id == current_user.id, Due.is_cancelled.isnot(True),
+            .filter(Due.is_paid.isnot(True), Due.creator.creator_id == current_user.id, Due.is_cancelled.isnot(True),
                     Due.transaction_type == 'fixed',
                     Due.customer_id == self.id).limit(1).scalar()
 
