@@ -63,14 +63,13 @@ class DueResource(ModelResource):
             current_user.counter += 1
             obj.invoice_num = current_user.counter
 
-            # Celery tasks exections
+            # Celery tasks executions
             try:
-                invoice = do_payment.delay(obj).result()
-                send_invoice.delay(invoice, obj)
+                do_payment.delay(obj.id)
                 if obj.transaction_type == 'subscription':
                     from datetime import timedelta
-                    sms_queue.apply_async(args=[obj], eta=obj.due_date-timedelta(days=3))
-                    sms_on_due_date.apply_async(args=[obj], eta=obj.due_date)
+                    sms_before_3_days.apply_async(args=[obj.id], eta=obj.due_date-timedelta(days=3))
+                    sms_on_due_date.apply_async(args=[obj.id], eta=obj.due_date)
                 elif obj.transaction_type == 'fixed':
                     obj.due_date = None 
 
