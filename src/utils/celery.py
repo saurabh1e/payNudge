@@ -32,4 +32,4 @@ class FlaskCelery(Celery):
         self.app = app
         self.config_from_object(app.config)
 
-celery = FlaskCelery()
+celery = FlaskCelery(broker="redis://:@localhost:6379/0")
