@@ -1,11 +1,13 @@
 ''' Celery Tasks '''
     
-from src import db, razor as razorpay, sms
-from src.utils.celery import celery
+from src import db, razor as razorpay, sms, celery
+from .schemas import Due
 
 # Send reminder on due-date
 @celery.task(name="celery.sms_on_due_date")
-def sms_on_due_date(dueObj):
+def sms_on_due_date(obj_id):
+    dueObj = Due.query.get(obj_id)
+
     # Only execute if payment is not done
     if dueObj.due_date is not None:
 
@@ -18,7 +20,9 @@ def sms_on_due_date(dueObj):
 
 # Send reminder 3 dasy before due-date
 @celery.task(name="celery.sms_before_3_days")
-def sms_before_3_days(dueObj):
+def sms_before_3_days(obj_id):
+    dueObj = Due.query.get(obj_id)
+
     # Only execute if payment is not done
     if dueObj.due_date is not None:
 
@@ -34,7 +38,8 @@ def sms_before_3_days(dueObj):
 
 # Send invoice after payment
 @celery.task(name="celery.send_invoice")
-def send_invoice(invoice, dueObj):
+def send_invoice(invoice, obj_id):
+    dueObj = Due.query.get(obj_id)
     content = [dict(message=f'Thank you for your interest in the service provided by'
             f' {dueObj.creator.business_name}. Here\'s your invoice and enjoy the service.\n'
             f' Invoice --> \n {invoice}', to=[dueObj.customer.mobile_number])]
@@ -42,7 +47,8 @@ def send_invoice(invoice, dueObj):
     sms.send_sms(content=content)
 
 @celery.task(name="celery.do_payment")
-def do_payment(obj):
+def do_payment(obj_id):
+    obj = Due.query.get(obj_id)
     if obj.customer.razor_pay_id:
         customer = razorpay.customer.fetch(customer_id=obj.customer.razor_pay_id)
     else:
@@ -75,7 +81,7 @@ def do_payment(obj):
         f' {obj.creator.business_name}.Please complete your subscription and enjoy the service.'
         f' Click to pay--> {subscription["short_url"]}', to=[obj.customer.mobile_number])]
         sms.send_sms(content=content)
-        return subscription
+        send_invoice.delay(subscription, obj_id)
 
     else:
         inv = razorpay.invoice.create(data={
@@ -91,4 +97,4 @@ def do_payment(obj):
             "description": obj.name,
         })
         print(inv)
-        return inv
+        send_invoice.delay(inv, obj_id)
