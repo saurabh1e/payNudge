@@ -1,6 +1,6 @@
 ''' Celery Tasks '''
     
-from src import db, razor as razorpay, sms, celery
+from src import db, razor as razorpay, sms, celery, url_shortener
 from .schemas import Due
 
 # Send reminder on due-date
@@ -38,11 +38,11 @@ def sms_before_3_days(obj_id):
 
 # Send invoice after payment
 @celery.task(name="celery.send_invoice")
-def send_invoice(invoice, obj_id):
+def send_invoice(invoice_url, obj_id):
     dueObj = Due.query.get(obj_id)
     content = [dict(message=f'Thank you for your interest in the service provided by'
             f' {dueObj.creator.business_name}. Here\'s your invoice and enjoy the service.\n'
-            f' Invoice --> \n {invoice}', to=[dueObj.customer.mobile_number])]
+            f' Invoice --> \n {invoice_url}', to=[dueObj.customer.mobile_number])]
             
     sms.send_sms(content=content)
 
@@ -77,11 +77,15 @@ def do_payment(obj_id):
         obj.razor_pay_id = subscription['id']
         db.session.commit()
         print(subscription)
+        token = subscription['id']
+        payment_url = f'http://localhost:8000/do_payment.html?token={token}'
+        print(payment_url)
         content = [dict(message=f'Thank you for your interest in the service provided by'
         f' {obj.creator.business_name}.Please complete your subscription and enjoy the service.'
-        f' Click to pay--> {subscription["short_url"]}', to=[obj.customer.mobile_number])]
+        f' Click to pay--> {payment_url}', to=[obj.customer.mobile_number])]
         sms.send_sms(content=content)
-        send_invoice.delay(subscription, obj_id)
+
+        #send_invoice.delay(, obj_id)
 
     else:
         inv = razorpay.invoice.create(data={
@@ -96,5 +100,10 @@ def do_payment(obj_id):
             "currency": "INR",
             "description": obj.name,
         })
-        print(inv)
+
+        context = { 
+            "inv_id": inv['id'],
+            "order_id": inv['order_id']
+        }
+
         send_invoice.delay(inv, obj_id)
