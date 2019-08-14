@@ -28,7 +28,7 @@ DataResourceType = TypeVar('DataResourceType', bound=DataResource)
 
 
 def _check_token():
-    user = _security.datastore.get_user(get_jwt_identity())
+    user = _security.datastore.get_user(get_jwt_identity()['id'])
     if user and user.is_authenticated:
         app = current_app._get_current_object()
         _request_ctx_stack.top.user = user

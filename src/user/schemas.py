@@ -5,7 +5,7 @@ from .models import User, Role, UserRole
 class UserSchema(BaseSchema):
     class Meta:
         model = User
-        exclude = ('updated_on',)
+        exclude = ('updated_on', 'my_payments', 'my_dues')
 
     id = ma.Integer(dump_only=True)
     email = ma.Email(required=False)

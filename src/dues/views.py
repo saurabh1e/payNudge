@@ -3,7 +3,6 @@ from src import api
 from src.utils.methods import List, Fetch, Create, Update
 from .resources import DueResource, PaymentResource
 
-
 @api.register()
 class DueView(BaseView):
     api_methods = [List, Fetch, Create, Update]
