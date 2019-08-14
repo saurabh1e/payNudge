@@ -1,6 +1,5 @@
 ''' Celery Tasks '''
-    
-from flask import jsonify
+
 from src import db, razor as razorpay, sms, celery, url_shortener
 from .schemas import Due
 
