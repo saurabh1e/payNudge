@@ -38,8 +38,12 @@ class BaseConfig:
     JWT_SECRET_KEY = 'test'
     JWT_HEADER_NAME = 'authorization'
 
-    MSG91_KEY = 'test'
+    MSG91_KEY = os.environ.get('MSG91_KEY')
     MSG91_URL = 'http://api.msg91.com/api/v2/sendsms'
+
+    BROKER_URL = os.environ.get('REDIS_URL') #'amqp://guest:@127.0.0.1:5672/'
+    CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL')
+    CELERY_BROKER_URL = os.environ.get('REDIS_URL')
 
     @staticmethod
     def init_app(app):
@@ -52,10 +56,15 @@ class BaseConfig:
 class DevConfig(BaseConfig):
     DEBUG = True
     TESTING = True
-    REDIS_URL = "redis://:@localhost:6379/0"
+    REDIS_URL = os.environ.get('REDIS_URL')
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URI')
-    RATELIMIT_STORAGE_URL = "redis://:@localhost:6379/0"
-    BROKER_URL = 'amqp://guest:@127.0.0.1:5672/'
+    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL')
+    RAZOR_PAY_KEY = os.environ.get('DEV_RAZOR_PAY_KEY')
+    RAZOR_PAY_SECRET = os.environ.get('DEV_RAZOR_PAY_SECRET')
+
+    #BROKER_URL = "redis://:@localhost:6379/0" #'amqp://guest:@127.0.0.1:5672/'
+    #CELERY_RESULT_BACKEND = "redis://:@localhost:6379/0"
+    #CELERY_BROKER_URL = "redis://:@localhost:6379/0"
 
 
 class TestConfig(BaseConfig):

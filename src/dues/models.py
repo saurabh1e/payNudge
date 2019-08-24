@@ -5,19 +5,17 @@ from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
 
 from src import db, ReprMixin, BaseMixin
 
-
 class Due(BaseMixin, ReprMixin, db.Model):
     __repr_fields__ = ['creator', 'customer']
 
-    name = db.Column(db.String(20),)
+    invoice_num = db.Column(db.Integer, nullable=True, default=0)
+    name = db.Column(db.String(20))
     amount = db.Column(NUMERIC(8, 2), nullable=False, default=0)
     transaction_type = db.Column(ENUM('fixed', 'subscription', name='varchar'), nullable=False, default='fixed')
     due_date = db.Column(db.Date, nullable=True)
     months = db.Column(db.SmallInteger, nullable=True, default=3)
-
     is_cancelled = db.Column(db.Boolean(), default=False)
     razor_pay_id = db.Column(db.String(20), unique=True)
-
     customer_id = db.Column(db.ForeignKey('user.id'), nullable=False)
     creator_id = db.Column(db.ForeignKey('user.id'), nullable=False)
 

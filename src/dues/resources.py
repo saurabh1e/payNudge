@@ -1,11 +1,12 @@
 from flask_security import current_user
 from sqlalchemy import and_
 
-from src import db, razor as razorpay, sms
+from src import db
 from src.user.models import UserToUser
 from src.utils import ModelResource, operators as ops
 from .schemas import Due, DueSchema, Payment, PaymentSchema
 
+from src.dues.celerytasks import sms_on_due_date, sms_before_3_days, send_invoice, do_payment
 
 class DueResource(ModelResource):
     model = Due
@@ -57,56 +58,25 @@ class DueResource(ModelResource):
                 return False
         return True
 
-    def after_objects_save(self, objects) -> None:
+    def after_objects_save(self, objects):
         for obj in objects:
-            if obj.customer.razor_pay_id:
+            current_user.counter += 1
+            obj.invoice_num = current_user.counter
 
-                customer = razorpay.customer.fetch(customer_id=obj.customer.razor_pay_id)
-            else:
-                customer = razorpay.customer.create(
-                    data={'name': obj.customer.first_name, 'contact': obj.customer.mobile_number})
-                obj.customer.razor_pay_id = customer['id']
-                db.session.commit()
-            print(customer)
+            # Celery tasks executions
+            try:
+                do_payment.delay(obj.id)
+                if obj.transaction_type == 'subscription':
+                    from datetime import timedelta
+                    sms_before_3_days.apply_async(args=[obj.id], eta=obj.due_date-timedelta(days=3))
+                    sms_on_due_date.apply_async(args=[obj.id], eta=obj.due_date)
+                elif obj.transaction_type == 'fixed':
+                    obj.due_date = None 
 
-            if obj.transaction_type == 'subscription':
-                plan = razorpay.plan.create(data={
-                    "period": "monthly",
-                    "interval": 1,
-                    "item": {
-                        "name": obj.name,
-                        "description": obj.name,
-                        "amount": float(obj.amount) * 100,
-                        "currency": "INR"
-                    }
-                })
-                import time
-                timestamp = time.mktime(obj.due_date.timetuple())
-                data = dict(plan_id=plan['id'], total_count=obj.months, customer_notify=1, customer_id=customer['id'],
-                            start_at=timestamp)
-                subscription = razorpay.subscription.create(data=data)
-                obj.razor_pay_id = subscription['id']
-                db.session.commit()
-                print(subscription)
-                content = [dict(message=f'Thank you for your interest in the service provided by'
-                f' {obj.creator.business_name}.Please complete your subscription and enjoy the service.'
-                f' Click to pay--> {subscription["short_url"]}', to=[obj.customer.mobile_number])]
-                sms.send_sms(content=content)
+            except Exception as e:
+                print("Couldn't complete transaction:", e)
 
-            else:
-                inv = razorpay.invoice.create(data={
-                    "customer": {
-                        "name": obj.customer.first_name,
-                        "email": "",
-                        "contact": obj.customer.mobile_number
-                    },
-                    "type": "link",
-                    "view_less": 1,
-                    "amount": float(obj.amount) * 100,
-                    "currency": "INR",
-                    "description": obj.name,
-                })
-                print(inv)
+            db.session.commit()
 
 
 class PaymentResource(ModelResource):

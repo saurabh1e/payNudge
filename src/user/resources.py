@@ -38,9 +38,7 @@ class UserResource(ModelResource):
     only = ()
 
     def has_read_permission(self, qs):
-        return qs.filter(User.id.in_(UserToUser.query
-                                     .with_entities(UserToUser.customer_id)
-                                     .filter(UserToUser.business_owner_id == current_user.id).all()))
+        return qs.filter(User.id == current_user.id)
 
     def has_change_permission(self, obj):
         if current_user.has_role('admin') or current_user.has_role('owner'):

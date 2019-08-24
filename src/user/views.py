@@ -35,14 +35,14 @@ class UserLoginResource(Resource):
         if request.json:
             data = request.json
             print(data)
-            user = self.model.query.filter(self.model.mobile_number == data['mobile_number']).first()
+            user = self.model.query.filter(self.model.email == data['email']).first()
             print(user)
             if user and verify_and_update_password(data['password'], user) and login_user(user):
                 expires = timedelta(days=365)
+                user = UserSchema(only=('id', 'email', 'first_name', 'last_name', 'roles', 'business_name')).dump(user).data
                 return make_response(
-                    jsonify({'id': user.id,
-                             'user': UserSchema(only=('id', 'email', 'first_name', 'last_name', 'roles', 'business_name')).dump(user).data,
-                             'authentication_token': create_access_token(identity=user.id, expires_delta=expires)}), 200)
+                    jsonify({'id': user['id'],
+                             'authentication_token': create_access_token(identity=user, expires_delta=expires)}), 200)
             else:
                 return make_response(jsonify({'meta': {'code': 403}}), 403)
 
